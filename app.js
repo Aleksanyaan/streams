@@ -1,6 +1,5 @@
 import fs from 'fs';
 import { Transform } from 'stream';
-import process from 'process';
 
 function detectOperation(inputFilePath, outputFilePath, operation) {
   const readableStream = fs.createReadStream(inputFilePath);
@@ -29,7 +28,6 @@ function detectOperation(inputFilePath, outputFilePath, operation) {
           break;
         default:
           throw new Error('Invalid operation');
-          return;
       }
       this.push(transformedChunk);
     }
@@ -37,30 +35,21 @@ function detectOperation(inputFilePath, outputFilePath, operation) {
 
   readableStream.pipe(transformStream).pipe(writableStream);
 
-  process.on('SIGINT',() =>{
+  process.on('SIGINT', () => {
     writableStream.destroy();
     readableStream.destroy();
+    process.exit();
   });
 }
 
-process.stdin.setEncoding('utf-8');
+const [, , inputFile, outputFile, operation] = process.argv;
 
-process.stdin.on('data',(data) => {
-    const input = data.trim();
+if (!inputFile || !outputFile || !operation) {
+  throw new Error('Invalid input');
+}
 
-    const parts = input.split(' ');
-    const inputFile = parts[0];
-    const outputFile = parts[1];
-    const operation = parts[2];
+if (!fs.existsSync(inputFile)) {
+  throw new Error('Input file not found');
+}
 
-    if (!inputFile || !outputFile || !operation) {
-      throw new Error('Invalid input');
-    }
-  
-    if (!fs.existsSync(inputFile)) {
-      throw new Error('Input file not found');
-    }
-    
-    detectOperation(inputFile, outputFile, operation);
-
-});
+detectOperation(inputFile, outputFile, operation);
